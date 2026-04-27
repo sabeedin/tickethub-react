@@ -318,3 +318,18 @@ button, input, select {
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
 }
+.authScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.authBox {
+  width: min(420px, 100%);
+  background: rgba(20,24,39,.88);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 26px;
+}
