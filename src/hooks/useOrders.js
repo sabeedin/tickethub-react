@@ -88,13 +88,15 @@ export default function useOrders() {
     return true
   })
 
-  const summary = {
-    total: orders.length,
-    success: orders.filter(o => o.status === "success").length,
-    pending: orders.filter(o => o.status === "pending").length,
-    failed: orders.filter(o => o.status === "failed").length,
-    revenue: orders.reduce((sum, o) => sum + (o.total || 0), 0)
-  }
+const summary = {
+  total: orders.length,
+  success: orders.filter(o => o.status === "success").length,
+  pending: orders.filter(o => o.status === "pending").length,
+  failed: orders.filter(o => o.status === "failed").length,
+  revenue: orders
+    .filter(o => o.status === "success")
+    .reduce((sum, o) => sum + (Number(o.feeTotal) || 0), 0)
+}
 
   return {
     orders: filtered,
