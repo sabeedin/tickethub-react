@@ -18,7 +18,9 @@ export default function Home() {
   return (
     <>
       <h2>อีเวนต์เร็ว ๆ นี้</h2>
-      <p style={{ color: "var(--muted)" }}>คลิกการ์ดเพื่อเพิ่มออเดอร์</p>
+      <p style={{ color: "var(--muted)" }}>
+        เลือกอีเวนต์เพื่อเพิ่มออเดอร์
+      </p>
 
       {concerts.length === 0 && (
         <p style={{ color: "var(--muted)" }}>
@@ -28,59 +30,27 @@ export default function Home() {
 
       <div className="grid">
         {concerts.map(c => (
-          <article className="card" key={c.id}>
-            <div className="poster" style={{ overflow: "hidden" }}>
-              {c.image && (
-                <img
-                  src={c.image}
-                  alt={c.name}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    opacity: 0.65
-                  }}
-                />
-              )}
-
-              <span className="tag" style={{ position: "relative", zIndex: 1 }}>
+          <article className="card event-card" key={c.id}>
+            <div
+              className="event-poster"
+              style={{
+                backgroundImage: c.image
+                  ? `linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.15)), url(${c.image})`
+                  : undefined
+              }}
+            >
+              <div className="event-status">
                 {c.status === "open"
                   ? "เปิดรับ"
                   : c.status === "soldout"
                   ? "Sold Out"
                   : "ยกเลิก"}
-              </span>
-            </div>
+              </div>
 
-            <div className="card-body">
-              <h3>{c.name}</h3>
-
-              <div className="meta">
-                <div>📅 วันแสดง: {formatDates(c.showDates)}</div>
-                <div>🖱 วันกด: {formatDates(c.pressDates)}</div>
-                <div>📍 สถานที่: {c.venue || "-"}</div>
-                <div>
-                  💳 โซน:{" "}
-                  {c.zones?.length
-                    ? c.zones.map(z => `${z.code} ${z.price}`).join(" / ")
-                    : "-"}
-                </div>
-
-                {c.ticketUrl && (
-                  <div>
-                    🔗 เว็บกด:{" "}
-                    <a
-                      href={c.ticketUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: "#c4b5fd" }}
-                    >
-                      เปิดลิงก์
-                    </a>
-                  </div>
-                )}
+              <div className="event-info">
+                <h3>{c.name}</h3>
+                <p>{c.venue || "-"}</p>
+                <p>📅 {formatDates(c.showDates)}</p>
               </div>
             </div>
 

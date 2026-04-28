@@ -19,7 +19,12 @@ export default function useConcerts() {
       return
     }
 
-    setConcerts((data || []).map(r => ({ id: r.id, ...r.data })))
+    setConcerts(
+      (data || []).map(c => ({
+        id: c.id,
+        ...c.data
+      }))
+    )
   }
 
   async function addConcert(concert) {
