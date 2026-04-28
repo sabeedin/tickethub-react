@@ -60,6 +60,55 @@ function downloadJson(filename, data) {
   URL.revokeObjectURL(url)
 }
 
+function downloadText(filename, text, type) {
+  const blob = new Blob([text], { type })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function escapeIcs(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n")
+}
+
+function toBangkokUtc(date, time, addHours = 0) {
+  const [year, month, day] = date.split("-").map(Number)
+  const [hour = 0, minute = 0] = (time || "00:00").split(":").map(Number)
+  const utc = new Date(Date.UTC(year, month - 1, day, hour - 7 + addHours, minute))
+  return utc.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")
+}
+
+function compactDate(date) {
+  return date.replace(/-/g, "")
+}
+
+function compactNextDate(date) {
+  const [year, month, day] = date.split("-").map(Number)
+  const next = new Date(Date.UTC(year, month - 1, day + 1))
+  return next.toISOString().slice(0, 10).replace(/-/g, "")
+}
+
+function countBy(list, getKey) {
+  return list.reduce((acc, item) => {
+    const key = getKey(item) || "ยังไม่ระบุ"
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
+}
+
+function formatCounts(counts) {
+  return Object.entries(counts)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join("\n")
+}
+
 async function exportBackup() {
   const [ordersResult, concertsResult] = await Promise.all([
     supabase.from("orders").select("*").order("id", { ascending: false }),
@@ -82,6 +131,112 @@ async function exportBackup() {
       concerts: concertsResult.data || []
     }
   })
+}
+
+async function exportCalendarPlan() {
+  const [ordersResult, concertsResult] = await Promise.all([
+    supabase.from("orders").select("*").order("id", { ascending: false }),
+    supabase.from("concerts").select("*").order("id", { ascending: false })
+  ])
+
+  if (ordersResult.error || concertsResult.error) {
+    alert(ordersResult.error?.message || concertsResult.error?.message)
+    return
+  }
+
+  const allOrders = (ordersResult.data || []).map(row => ({
+    id: row.id,
+    ...(row.data || {})
+  }))
+  const concerts = (concertsResult.data || []).map(row => ({
+    id: row.id,
+    ...(row.data || {})
+  }))
+
+  const events = concerts.flatMap(concert => {
+    const pressDates = (concert.pressDates || []).filter(d => d.date)
+    const concertOrders = allOrders.filter(order => order.concertId === concert.id)
+
+    return pressDates.map((pressDate, index) => {
+      const hasTime = Boolean(pressDate.time)
+      const assignees = formatCounts(countBy(concertOrders, order => order.assignee))
+      const infoStatuses = formatCounts(countBy(concertOrders, order => INFO_STATUS[order.infoStatus || "complete"]))
+      const difficulties = formatCounts(countBy(concertOrders, order => DIFFICULTY[order.zoneDifficulty]))
+      const zones = formatCounts(countBy(concertOrders, order => order.zoneCode))
+
+      const description = [
+        `เว็บกดบัตร: ${concert.ticketUrl || "-"}`,
+        `จำนวนออเดอร์: ${concertOrders.length}`,
+        "",
+        "สถานะข้อมูล:",
+        infoStatuses || "-",
+        "",
+        "ผู้กด:",
+        assignees || "-",
+        "",
+        "โซน:",
+        zones || "-",
+        "",
+        "ความยากโซน:",
+        difficulties || "-",
+        "",
+        "หมายเหตุ: เช็ค login และ standby ก่อนเวลา"
+      ].join("\n")
+
+      return {
+        uid: `tickethub-${concert.id}-${index}@tickethub-react`,
+        title: `กดบัตร: ${concert.name}`,
+        location: concert.venue || "",
+        description,
+        date: pressDate.date,
+        time: pressDate.time,
+        hasTime
+      }
+    })
+  })
+
+  if (!events.length) {
+    alert("ยังไม่มีวันกดบัตรสำหรับ Export Calendar Plan")
+    return
+  }
+
+  const now = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z")
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//TicketHub React//Calendar Plan//TH",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH"
+  ]
+
+  events.forEach(event => {
+    lines.push("BEGIN:VEVENT")
+    lines.push(`UID:${escapeIcs(event.uid)}`)
+    lines.push(`DTSTAMP:${now}`)
+    lines.push(`SUMMARY:${escapeIcs(event.title)}`)
+    if (event.location) lines.push(`LOCATION:${escapeIcs(event.location)}`)
+    lines.push(`DESCRIPTION:${escapeIcs(event.description)}`)
+
+    if (event.hasTime) {
+      lines.push(`DTSTART:${toBangkokUtc(event.date, event.time)}`)
+      lines.push(`DTEND:${toBangkokUtc(event.date, event.time, 1)}`)
+      lines.push("BEGIN:VALARM")
+      lines.push("TRIGGER:-PT1H")
+      lines.push("ACTION:DISPLAY")
+      lines.push(`DESCRIPTION:${escapeIcs(event.title)}`)
+      lines.push("END:VALARM")
+    } else {
+      lines.push(`DTSTART;VALUE=DATE:${compactDate(event.date)}`)
+      lines.push(`DTEND;VALUE=DATE:${compactNextDate(event.date)}`)
+    }
+
+    lines.push("END:VEVENT")
+  })
+
+  lines.push("END:VCALENDAR")
+
+  const date = new Date().toISOString().slice(0, 10)
+  downloadText(`tickethub-calendar-plan-${date}.ics`, lines.join("\r\n"), "text/calendar;charset=utf-8")
 }
 
 const STATUS = {
@@ -211,6 +366,12 @@ export default function Orders() {
           onClick={exportBackup}
         >
           💾 Export Backup
+        </button>
+        <button
+          className="btn"
+          onClick={exportCalendarPlan}
+        >
+          📅 Export Calendar Plan
         </button>
       </div>      {orders.length === 0 && (
         <p style={{ color: "var(--muted)" }}>ยังไม่มีออเดอร์</p>
