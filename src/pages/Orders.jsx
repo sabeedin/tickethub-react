@@ -1,4 +1,5 @@
 import useOrders from "../hooks/useOrders.js"
+import { supabase } from "../lib/supabase.js"
 import * as XLSX from "xlsx"
 
 function safeSheetName(name, index) {
@@ -45,6 +46,42 @@ function exportExcel(orders) {
   })
 
   XLSX.writeFile(wb, "orders.xlsx")
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json"
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportBackup() {
+  const [ordersResult, concertsResult] = await Promise.all([
+    supabase.from("orders").select("*").order("id", { ascending: false }),
+    supabase.from("concerts").select("*").order("id", { ascending: false })
+  ])
+
+  if (ordersResult.error || concertsResult.error) {
+    alert(ordersResult.error?.message || concertsResult.error?.message)
+    return
+  }
+
+  const date = new Date().toISOString().slice(0, 10)
+
+  downloadJson(`tickethub-backup-${date}.json`, {
+    app: "TicketHub React",
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    tables: {
+      orders: ordersResult.data || [],
+      concerts: concertsResult.data || []
+    }
+  })
 }
 
 const STATUS = {
@@ -162,12 +199,18 @@ export default function Orders() {
         />
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         <button
           className="btn primary"
           onClick={() => exportExcel(orders)}
         >
           📥 Export Excel
+        </button>
+        <button
+          className="btn"
+          onClick={exportBackup}
+        >
+          💾 Export Backup
         </button>
       </div>      {orders.length === 0 && (
         <p style={{ color: "var(--muted)" }}>ยังไม่มีออเดอร์</p>
