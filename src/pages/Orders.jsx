@@ -1,6 +1,14 @@
 import useOrders from "../hooks/useOrders.js"
 import * as XLSX from "xlsx"
 
+function safeSheetName(name, index) {
+  const cleanName = String(name || "")
+    .replace(/[:\\/?*\[\]]/g, " ")
+    .trim()
+
+  return (cleanName || `Sheet ${index + 1}`).slice(0, 31)
+}
+
 function exportExcel(orders) {
   const wb = XLSX.utils.book_new()
 
@@ -11,9 +19,9 @@ function exportExcel(orders) {
     return acc
   }, {})
 
-  Object.entries(grouped).forEach(([concertName, list]) => {
+  Object.entries(grouped).forEach(([concertName, list], index) => {
     const rows = [
-      ["ชื่อลูกค้า", "คอนเสิร์ต", "โซน", "จำนวน", "ยอดรวม", "สถานะ"]
+      ["ชื่อลูกค้า", "คอนเสิร์ต", "โซน", "จำนวน", "ยอดรวม", "สถานะ", "สถานะข้อมูล", "หมายเหตุลูกค้า"]
     ]
 
     list.forEach(o => {
@@ -23,12 +31,14 @@ function exportExcel(orders) {
         o.zoneCode,
         o.qty,
         o.total,
-        o.status
+        o.status,
+        o.infoStatus || "complete",
+        o.customerNote || ""
       ])
     })
 
     const ws = XLSX.utils.aoa_to_sheet(rows)
-    XLSX.utils.book_append_sheet(wb, ws, concertName.slice(0, 31))
+    XLSX.utils.book_append_sheet(wb, ws, safeSheetName(concertName, index))
   })
 
   XLSX.writeFile(wb, "orders.xlsx")
@@ -41,12 +51,20 @@ const STATUS = {
   failed: "ไม่ได้"
 }
 
+const INFO_STATUS = {
+  complete: "ข้อมูลครบ",
+  waiting: "รอข้อมูล",
+  confirm: "ต้องยืนยัน"
+}
+
 export default function Orders() {
   const {
     orders,
     updateStatus,
+    updateInfoStatus,
     deleteOrder,
     setFilter,
+    setInfoFilter,
     setSearch,
     summary
   } = useOrders()
@@ -67,6 +85,11 @@ export default function Orders() {
         <div className="stat">
           <span>รอดำเนินการ</span>
           <b>{summary.pending}</b>
+        </div>
+
+        <div className="stat">
+          <span>รอข้อมูล</span>
+          <b>{summary.waitingInfo}</b>
         </div>
 
         <div className="stat">
@@ -92,6 +115,16 @@ export default function Orders() {
           <option value="success">สำเร็จ</option>
           <option value="failed">ไม่ได้</option>
         </select>
+
+        <select
+          className="input"
+          onChange={e => setInfoFilter(e.target.value)}
+        >
+          <option value="">ทุกสถานะข้อมูล</option>
+          <option value="complete">ข้อมูลครบ</option>
+          <option value="waiting">รอข้อมูล</option>
+          <option value="confirm">ต้องยืนยัน</option>
+        </select>
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -115,9 +148,14 @@ export default function Orders() {
               </div>
             </div>
 
-            <span className={`badge ${o.status}`}>
-              {STATUS[o.status]}
-            </span>
+            <div className="badges">
+              <span className={`badge info-${o.infoStatus || "complete"}`}>
+                {INFO_STATUS[o.infoStatus || "complete"]}
+              </span>
+              <span className={`badge ${o.status}`}>
+                {STATUS[o.status]}
+              </span>
+            </div>
           </div>
 
           <div className="meta" style={{ marginTop: 10 }}>
@@ -127,6 +165,12 @@ export default function Orders() {
             {o.pressDate && <div>วันกด: {o.pressDate}</div>}
             {o.contact && <div>ติดต่อ: {o.contact}</div>}
           </div>
+
+          {o.customerNote && (
+            <div className="note">
+              <b>หมายเหตุลูกค้า:</b> {o.customerNote}
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <select
@@ -138,6 +182,16 @@ export default function Orders() {
               <option value="processing">กำลังกด</option>
               <option value="success">สำเร็จ</option>
               <option value="failed">ไม่ได้</option>
+            </select>
+
+            <select
+              className="input"
+              value={o.infoStatus || "complete"}
+              onChange={e => updateInfoStatus(o.id, e.target.value)}
+            >
+              <option value="complete">ข้อมูลครบ</option>
+              <option value="waiting">รอข้อมูล</option>
+              <option value="confirm">ต้องยืนยัน</option>
             </select>
 
             <button

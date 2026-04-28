@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase.js"
 export default function useOrders() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState("")
+  const [infoFilter, setInfoFilter] = useState("")
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -21,12 +22,19 @@ export default function useOrders() {
       return
     }
 
-    setOrders((data || []).map(r => ({ id: r.id, ...r.data })))
+    setOrders((data || []).map(r => ({
+      id: r.id,
+      infoStatus: "complete",
+      customerNote: "",
+      ...r.data
+    })))
   }
 
   async function addOrder(order) {
     const newOrder = {
       id: Date.now(),
+      infoStatus: "complete",
+      customerNote: "",
       ...order,
       status: "pending",
       createdAt: new Date().toLocaleDateString("th-TH")
@@ -46,9 +54,9 @@ export default function useOrders() {
     return true
   }
 
-  async function updateStatus(id, status) {
+  async function updateOrder(id, patch) {
     const updated = orders.map(o =>
-      o.id === id ? { ...o, status } : o
+      o.id === id ? { ...o, ...patch } : o
     )
 
     setOrders(updated)
@@ -63,6 +71,14 @@ export default function useOrders() {
       alert(error.message)
       console.error(error)
     }
+  }
+
+  async function updateStatus(id, status) {
+    return updateOrder(id, { status })
+  }
+
+  async function updateInfoStatus(id, infoStatus) {
+    return updateOrder(id, { infoStatus })
   }
 
   async function deleteOrder(id) {
@@ -84,6 +100,7 @@ export default function useOrders() {
 
   const filtered = orders.filter(o => {
     if (filter && o.status !== filter) return false
+    if (infoFilter && (o.infoStatus || "complete") !== infoFilter) return false
     if (search && !o.name?.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -92,18 +109,21 @@ const summary = {
   total: orders.length,
   success: orders.filter(o => o.status === "success").length,
   pending: orders.filter(o => o.status === "pending").length,
+  waitingInfo: orders.filter(o => o.infoStatus === "waiting").length,
   failed: orders.filter(o => o.status === "failed").length,
   revenue: orders
     .filter(o => o.status === "success")
-    .reduce((sum, o) => sum + (Number(o.feeTotal) || 0), 0)
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0)
 }
 
   return {
     orders: filtered,
     addOrder,
     updateStatus,
+    updateInfoStatus,
     deleteOrder,
     setFilter,
+    setInfoFilter,
     setSearch,
     summary
   }

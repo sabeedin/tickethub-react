@@ -12,7 +12,9 @@ export default function OrderModal({ open, onClose, concert, onSubmit }) {
     qty: 1,
     zoneIndex: "",
     showDateIndex: "",
-    pressDateIndex: ""
+    pressDateIndex: "",
+    infoStatus: "complete",
+    customerNote: ""
   })
 
   if (!open || !concert) return null
@@ -22,11 +24,14 @@ export default function OrderModal({ open, onClose, concert, onSubmit }) {
   const pressDates = concert.pressDates || []
 
   const zone = zones[Number(form.zoneIndex)]
-  const total = zone ? (Number(zone.price) + Number(zone.fee || 0)) * Number(form.qty || 1) : 0
+  const qty = Number(form.qty)
+  const safeQty = Number.isFinite(qty) && qty > 0 ? qty : 1
+  const total = zone ? (Number(zone.price) + Number(zone.fee || 0)) * safeQty : 0
 
 async function submit() {
   if (!form.name.trim()) return alert("กรอกชื่อลูกค้าก่อน")
   if (!zone) return alert("เลือกโซนก่อน")
+  if (!Number.isFinite(qty) || qty < 1) return alert("จำนวนตั๋วต้องมากกว่า 0")
 
   const selectedShowDate = showDates[Number(form.showDateIndex)]
   const selectedPressDate = pressDates[Number(form.pressDateIndex)]
@@ -34,7 +39,7 @@ async function submit() {
   const ok = await onSubmit({
     name: form.name,
     contact: form.contact,
-    qty: Number(form.qty || 1),
+    qty,
     concert: concert.name,
     concertId: concert.id,
     venue: concert.venue,
@@ -44,8 +49,10 @@ async function submit() {
     zoneCode: zone.code,
     zonePrice: Number(zone.price),
     feePerTicket: Number(zone.fee || 0),
-    feeTotal: Number(zone.fee || 0) * Number(form.qty || 1),
-    total
+    feeTotal: Number(zone.fee || 0) * qty,
+    total,
+    infoStatus: form.infoStatus,
+    customerNote: form.customerNote.trim()
   })
 
   if (!ok) return
@@ -56,7 +63,9 @@ async function submit() {
     qty: 1,
     zoneIndex: "",
     showDateIndex: "",
-    pressDateIndex: ""
+    pressDateIndex: "",
+    infoStatus: "complete",
+    customerNote: ""
   })
 
   onClose()
@@ -126,12 +135,29 @@ async function submit() {
             type="number"
             min="1"
             value={form.qty}
-            onChange={e => setForm({ ...form, qty: Number(e.target.value) })}
+            onChange={e => setForm({ ...form, qty: e.target.value })}
+          />
+
+          <select
+            className="input"
+            value={form.infoStatus}
+            onChange={e => setForm({ ...form, infoStatus: e.target.value })}
+          >
+            <option value="complete">ข้อมูลครบ</option>
+            <option value="waiting">รอข้อมูล</option>
+            <option value="confirm">ต้องยืนยัน</option>
+          </select>
+
+          <textarea
+            className="input textarea"
+            placeholder="หมายเหตุลูกค้า เช่น โซนสำรอง, งบสูงสุด, ต้องการที่นั่งติดกัน"
+            value={form.customerNote}
+            onChange={e => setForm({ ...form, customerNote: e.target.value })}
           />
 
           <div className="total-box">
-            ราคาบัตร: <b>{zone ? Number(zone.price) * Number(form.qty || 1) : 0}</b> บาท<br />
-            ค่ากด: <b>{zone ? Number(zone.fee || 0) * Number(form.qty || 1) : 0}</b> บาท<br />
+            ราคาบัตร: <b>{zone ? Number(zone.price) * safeQty : 0}</b> บาท<br />
+            ค่ากด: <b>{zone ? Number(zone.fee || 0) * safeQty : 0}</b> บาท<br />
             รวมทั้งหมด: <b>{total}</b> บาท
           </div>
         </div>

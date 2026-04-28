@@ -217,6 +217,17 @@ button, input, select {
 .badge.processing { background:#0c1f40; color:#60a5fa; }
 .badge.success { background:#052e16; color:#4ade80; }
 .badge.failed { background:#2d0a0a; color:#f87171; }
+.badge.info-complete { background:#052e16; color:#86efac; }
+.badge.info-waiting { background:#3d2a04; color:#fde68a; }
+.badge.info-confirm { background:#2e1065; color:#c4b5fd; }
+
+.badges {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 
 .filters {
   display: flex;
@@ -238,9 +249,28 @@ button, input, select {
   color: #111;
 }
 
+.textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.note b {
+  color: var(--text);
+}
+
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   margin-bottom: 18px;
 }
