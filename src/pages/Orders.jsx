@@ -21,14 +21,17 @@ function exportExcel(orders) {
 
   Object.entries(grouped).forEach(([concertName, list], index) => {
     const rows = [
-      ["ชื่อลูกค้า", "คอนเสิร์ต", "โซน", "จำนวน", "ยอดรวม", "สถานะ", "สถานะข้อมูล", "หมายเหตุลูกค้า"]
+      ["คิว", "ชื่อลูกค้า", "คอนเสิร์ต", "โซน", "ความยากโซน", "ผู้กด", "จำนวน", "ยอดรวม", "สถานะ", "สถานะข้อมูล", "หมายเหตุลูกค้า"]
     ]
 
     list.forEach(o => {
       rows.push([
+        o.queueNumber || "",
         o.name,
         o.concert,
         o.zoneCode,
+        o.zoneDifficulty || "",
+        o.assignee || "",
         o.qty,
         o.total,
         o.status,
@@ -57,14 +60,24 @@ const INFO_STATUS = {
   confirm: "ต้องยืนยัน"
 }
 
+const DIFFICULTY = {
+  easy: "ง่าย",
+  normal: "ปานกลาง",
+  hard: "ยาก",
+  "very-hard": "ยากมาก"
+}
+
 export default function Orders() {
   const {
     orders,
     updateStatus,
     updateInfoStatus,
+    updateOrder,
     deleteOrder,
     setFilter,
     setInfoFilter,
+    setDifficultyFilter,
+    setAssigneeFilter,
     setSearch,
     summary
   } = useOrders()
@@ -90,6 +103,11 @@ export default function Orders() {
         <div className="stat">
           <span>รอข้อมูล</span>
           <b>{summary.waitingInfo}</b>
+        </div>
+
+        <div className="stat">
+          <span>ยังไม่แบ่งผู้กด</span>
+          <b>{summary.unassigned}</b>
         </div>
 
         <div className="stat">
@@ -125,6 +143,23 @@ export default function Orders() {
           <option value="waiting">รอข้อมูล</option>
           <option value="confirm">ต้องยืนยัน</option>
         </select>
+
+        <select
+          className="input"
+          onChange={e => setDifficultyFilter(e.target.value)}
+        >
+          <option value="">ทุกความยาก</option>
+          <option value="easy">ง่าย</option>
+          <option value="normal">ปานกลาง</option>
+          <option value="hard">ยาก</option>
+          <option value="very-hard">ยากมาก</option>
+        </select>
+
+        <input
+          className="input"
+          placeholder="ค้นหาผู้กด..."
+          onChange={e => setAssigneeFilter(e.target.value)}
+        />
       </div>
 
       <div style={{ marginBottom: 16 }}>
@@ -142,13 +177,21 @@ export default function Orders() {
         <div className="order" key={o.id}>
           <div className="order-head">
             <div>
-              <div className="order-name">{o.name}</div>
+              <div className="order-name">
+                {o.queueNumber ? `#คิว ${o.queueNumber} · ` : ""}
+                {o.name}
+              </div>
               <div className="order-sub">
                 {o.concert} • {o.venue || "-"} • โซน {o.zoneCode}
               </div>
             </div>
 
             <div className="badges">
+              {o.zoneDifficulty && (
+                <span className={`badge difficulty-${o.zoneDifficulty}`}>
+                  {DIFFICULTY[o.zoneDifficulty]}
+                </span>
+              )}
               <span className={`badge info-${o.infoStatus || "complete"}`}>
                 {INFO_STATUS[o.infoStatus || "complete"]}
               </span>
@@ -164,6 +207,7 @@ export default function Orders() {
             {o.showDate && <div>วันแสดง: {o.showDate}</div>}
             {o.pressDate && <div>วันกด: {o.pressDate}</div>}
             {o.contact && <div>ติดต่อ: {o.contact}</div>}
+            <div>ผู้กด: {o.assignee || "ยังไม่ระบุ"}</div>
           </div>
 
           {o.customerNote && (
@@ -172,7 +216,21 @@ export default function Orders() {
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <div className="order-controls">
+            <input
+              className="input small-input"
+              placeholder="คิว"
+              defaultValue={o.queueNumber || ""}
+              onBlur={e => updateOrder(o.id, { queueNumber: e.target.value.trim() })}
+            />
+
+            <input
+              className="input assignee-input"
+              placeholder="ผู้กด"
+              defaultValue={o.assignee || ""}
+              onBlur={e => updateOrder(o.id, { assignee: e.target.value.trim() })}
+            />
+
             <select
               className="input"
               value={o.status}
@@ -182,6 +240,18 @@ export default function Orders() {
               <option value="processing">กำลังกด</option>
               <option value="success">สำเร็จ</option>
               <option value="failed">ไม่ได้</option>
+            </select>
+
+            <select
+              className="input"
+              value={o.zoneDifficulty || ""}
+              onChange={e => updateOrder(o.id, { zoneDifficulty: e.target.value })}
+            >
+              <option value="">ไม่ระบุความยาก</option>
+              <option value="easy">ง่าย</option>
+              <option value="normal">ปานกลาง</option>
+              <option value="hard">ยาก</option>
+              <option value="very-hard">ยากมาก</option>
             </select>
 
             <select

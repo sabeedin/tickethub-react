@@ -220,6 +220,10 @@ button, input, select {
 .badge.info-complete { background:#052e16; color:#86efac; }
 .badge.info-waiting { background:#3d2a04; color:#fde68a; }
 .badge.info-confirm { background:#2e1065; color:#c4b5fd; }
+.badge.difficulty-easy { background:#083344; color:#67e8f9; }
+.badge.difficulty-normal { background:#1f2937; color:#d1d5db; }
+.badge.difficulty-hard { background:#3d2a04; color:#fde68a; }
+.badge.difficulty-very-hard { background:#450a0a; color:#fca5a5; }
 
 .badges {
   display: flex;
@@ -268,9 +272,24 @@ button, input, select {
   color: var(--text);
 }
 
+.order-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.small-input {
+  width: 88px;
+}
+
+.assignee-input {
+  min-width: 140px;
+}
+
 .summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
   margin-bottom: 18px;
 }

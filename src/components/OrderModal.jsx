@@ -13,6 +13,9 @@ export default function OrderModal({ open, onClose, concert, onSubmit }) {
     zoneIndex: "",
     showDateIndex: "",
     pressDateIndex: "",
+    queueNumber: "",
+    assignee: "",
+    zoneDifficulty: "",
     infoStatus: "complete",
     customerNote: ""
   })
@@ -51,6 +54,9 @@ async function submit() {
     feePerTicket: Number(zone.fee || 0),
     feeTotal: Number(zone.fee || 0) * qty,
     total,
+    queueNumber: form.queueNumber.trim(),
+    assignee: form.assignee.trim(),
+    zoneDifficulty: form.zoneDifficulty,
     infoStatus: form.infoStatus,
     customerNote: form.customerNote.trim()
   })
@@ -64,6 +70,9 @@ async function submit() {
     zoneIndex: "",
     showDateIndex: "",
     pressDateIndex: "",
+    queueNumber: "",
+    assignee: "",
+    zoneDifficulty: "",
     infoStatus: "complete",
     customerNote: ""
   })
@@ -137,6 +146,32 @@ async function submit() {
             value={form.qty}
             onChange={e => setForm({ ...form, qty: e.target.value })}
           />
+
+          <input
+            className="input"
+            placeholder="ลำดับคิว เช่น 1"
+            value={form.queueNumber}
+            onChange={e => setForm({ ...form, queueNumber: e.target.value })}
+          />
+
+          <input
+            className="input"
+            placeholder="ผู้กด เช่น บี, ทีม A"
+            value={form.assignee}
+            onChange={e => setForm({ ...form, assignee: e.target.value })}
+          />
+
+          <select
+            className="input"
+            value={form.zoneDifficulty}
+            onChange={e => setForm({ ...form, zoneDifficulty: e.target.value })}
+          >
+            <option value="">เลือกความยากโซน</option>
+            <option value="easy">ง่าย</option>
+            <option value="normal">ปานกลาง</option>
+            <option value="hard">ยาก</option>
+            <option value="very-hard">ยากมาก</option>
+          </select>
 
           <select
             className="input"

@@ -5,6 +5,8 @@ export default function useOrders() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState("")
   const [infoFilter, setInfoFilter] = useState("")
+  const [difficultyFilter, setDifficultyFilter] = useState("")
+  const [assigneeFilter, setAssigneeFilter] = useState("")
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -24,6 +26,9 @@ export default function useOrders() {
 
     setOrders((data || []).map(r => ({
       id: r.id,
+      queueNumber: "",
+      assignee: "",
+      zoneDifficulty: "",
       infoStatus: "complete",
       customerNote: "",
       ...r.data
@@ -33,6 +38,9 @@ export default function useOrders() {
   async function addOrder(order) {
     const newOrder = {
       id: Date.now(),
+      queueNumber: "",
+      assignee: "",
+      zoneDifficulty: "",
       infoStatus: "complete",
       customerNote: "",
       ...order,
@@ -101,8 +109,22 @@ export default function useOrders() {
   const filtered = orders.filter(o => {
     if (filter && o.status !== filter) return false
     if (infoFilter && (o.infoStatus || "complete") !== infoFilter) return false
+    if (difficultyFilter && (o.zoneDifficulty || "") !== difficultyFilter) return false
+    if (assigneeFilter && !o.assignee?.toLowerCase().includes(assigneeFilter.toLowerCase())) return false
     if (search && !o.name?.toLowerCase().includes(search.toLowerCase())) return false
     return true
+  }).sort((a, b) => {
+    if (a.concertId === b.concertId) {
+      const queueA = Number(a.queueNumber)
+      const queueB = Number(b.queueNumber)
+      const hasQueueA = Number.isFinite(queueA) && queueA > 0
+      const hasQueueB = Number.isFinite(queueB) && queueB > 0
+
+      if (hasQueueA && hasQueueB && queueA !== queueB) return queueA - queueB
+      if (hasQueueA !== hasQueueB) return hasQueueA ? -1 : 1
+    }
+
+    return Number(b.id) - Number(a.id)
   })
 
 const summary = {
@@ -110,6 +132,7 @@ const summary = {
   success: orders.filter(o => o.status === "success").length,
   pending: orders.filter(o => o.status === "pending").length,
   waitingInfo: orders.filter(o => o.infoStatus === "waiting").length,
+  unassigned: orders.filter(o => !o.assignee?.trim()).length,
   failed: orders.filter(o => o.status === "failed").length,
   revenue: orders
     .filter(o => o.status === "success")
@@ -121,9 +144,12 @@ const summary = {
     addOrder,
     updateStatus,
     updateInfoStatus,
+    updateOrder,
     deleteOrder,
     setFilter,
     setInfoFilter,
+    setDifficultyFilter,
+    setAssigneeFilter,
     setSearch,
     summary
   }
