@@ -1,3 +1,4 @@
+import { useState } from "react"
 import useOrders from "../hooks/useOrders.js"
 import { supabase } from "../lib/supabase.js"
 import * as XLSX from "xlsx"
@@ -259,7 +260,170 @@ const DIFFICULTY = {
   "very-hard": "ยากมาก"
 }
 
+function createEditForm(order) {
+  return {
+    name: order.name || "",
+    contact: order.contact || "",
+    qty: order.qty || 1,
+    showDate: order.showDate || "",
+    pressDate: order.pressDate || "",
+    queueNumber: order.queueNumber || "",
+    assignee: order.assignee || "",
+    status: order.status || "pending",
+    zoneDifficulty: order.zoneDifficulty || "",
+    infoStatus: order.infoStatus || "complete",
+    customerNote: order.customerNote || ""
+  }
+}
+
+function buildOrderPatch(order, form) {
+  const qty = Number(form.qty)
+  const safeQty = Number.isFinite(qty) && qty > 0 ? qty : 1
+  const zonePrice = Number(order.zonePrice || 0)
+  const feePerTicket = Number(order.feePerTicket || 0)
+  const canRecalculate = zonePrice > 0 || feePerTicket > 0
+
+  return {
+    name: form.name.trim(),
+    contact: form.contact.trim(),
+    qty: safeQty,
+    showDate: form.showDate.trim(),
+    pressDate: form.pressDate.trim(),
+    queueNumber: form.queueNumber.trim(),
+    assignee: form.assignee.trim(),
+    status: form.status,
+    zoneDifficulty: form.zoneDifficulty,
+    infoStatus: form.infoStatus,
+    customerNote: form.customerNote.trim(),
+    ...(canRecalculate ? {
+      feeTotal: feePerTicket * safeQty,
+      total: (zonePrice + feePerTicket) * safeQty
+    } : {})
+  }
+}
+
+function EditOrderModal({ order, onClose, onSave }) {
+  const [form, setForm] = useState(() => createEditForm(order))
+
+  async function submit() {
+    if (!form.name.trim()) return alert("กรอกชื่อลูกค้าก่อน")
+
+    await onSave(order.id, buildOrderPatch(order, form))
+    onClose()
+  }
+
+  return (
+    <div className="modal-back">
+      <div className="modal">
+        <h3>แก้ไขออเดอร์ — {order.concert}</h3>
+
+        <div className="form two-col-form">
+          <input
+            className="input"
+            placeholder="ชื่อลูกค้า"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+          />
+
+          <input
+            className="input"
+            placeholder="เบอร์โทร / ไลน์"
+            value={form.contact}
+            onChange={e => setForm({ ...form, contact: e.target.value })}
+          />
+
+          <input
+            className="input"
+            type="number"
+            min="1"
+            value={form.qty}
+            onChange={e => setForm({ ...form, qty: e.target.value })}
+          />
+
+          <input
+            className="input"
+            placeholder="ลำดับคิว"
+            value={form.queueNumber}
+            onChange={e => setForm({ ...form, queueNumber: e.target.value })}
+          />
+
+          <input
+            className="input"
+            placeholder="ผู้กด"
+            value={form.assignee}
+            onChange={e => setForm({ ...form, assignee: e.target.value })}
+          />
+
+          <select
+            className="input"
+            value={form.status}
+            onChange={e => setForm({ ...form, status: e.target.value })}
+          >
+            <option value="pending">รอดำเนินการ</option>
+            <option value="processing">กำลังกด</option>
+            <option value="success">สำเร็จ</option>
+            <option value="failed">ไม่ได้</option>
+          </select>
+
+          <select
+            className="input"
+            value={form.zoneDifficulty}
+            onChange={e => setForm({ ...form, zoneDifficulty: e.target.value })}
+          >
+            <option value="">ไม่ระบุความยาก</option>
+            <option value="easy">ง่าย</option>
+            <option value="normal">ปานกลาง</option>
+            <option value="hard">ยาก</option>
+            <option value="very-hard">ยากมาก</option>
+          </select>
+
+          <select
+            className="input"
+            value={form.infoStatus}
+            onChange={e => setForm({ ...form, infoStatus: e.target.value })}
+          >
+            <option value="complete">ข้อมูลครบ</option>
+            <option value="waiting">รอข้อมูล</option>
+            <option value="confirm">ต้องยืนยัน</option>
+          </select>
+
+          <input
+            className="input span-2"
+            placeholder="วันแสดง เช่น 2026-06-12 18:00 / 2026-06-13 18:00"
+            value={form.showDate}
+            onChange={e => setForm({ ...form, showDate: e.target.value })}
+          />
+
+          <input
+            className="input span-2"
+            placeholder="วันกด"
+            value={form.pressDate}
+            onChange={e => setForm({ ...form, pressDate: e.target.value })}
+          />
+
+          <textarea
+            className="input textarea span-2"
+            placeholder="หมายเหตุลูกค้า"
+            value={form.customerNote}
+            onChange={e => setForm({ ...form, customerNote: e.target.value })}
+          />
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn primary" onClick={submit}>
+            บันทึกการแก้ไข
+          </button>
+          <button className="btn" onClick={onClose}>
+            ยกเลิก
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Orders() {
+  const [editingOrder, setEditingOrder] = useState(null)
   const {
     orders,
     updateStatus,
@@ -373,7 +537,17 @@ export default function Orders() {
         >
           📅 Export Calendar Plan
         </button>
-      </div>      {orders.length === 0 && (
+      </div>
+
+      {editingOrder && (
+        <EditOrderModal
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onSave={updateOrder}
+        />
+      )}
+
+      {orders.length === 0 && (
         <p style={{ color: "var(--muted)" }}>ยังไม่มีออเดอร์</p>
       )}
 
@@ -421,6 +595,13 @@ export default function Orders() {
           )}
 
           <div className="order-controls">
+            <button
+              className="btn"
+              onClick={() => setEditingOrder(o)}
+            >
+              แก้ไข
+            </button>
+
             <input
               className="input small-input"
               placeholder="คิว"

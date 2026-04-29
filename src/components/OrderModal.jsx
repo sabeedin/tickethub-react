@@ -11,7 +11,7 @@ export default function OrderModal({ open, onClose, concert, onSubmit }) {
     contact: "",
     qty: 1,
     zoneIndex: "",
-    showDateIndex: "",
+    showDateIndexes: [],
     pressDateIndex: "",
     queueNumber: "",
     assignee: "",
@@ -36,7 +36,9 @@ async function submit() {
   if (!zone) return alert("เลือกโซนก่อน")
   if (!Number.isFinite(qty) || qty < 1) return alert("จำนวนตั๋วต้องมากกว่า 0")
 
-  const selectedShowDate = showDates[Number(form.showDateIndex)]
+  const selectedShowDates = form.showDateIndexes
+    .map(index => showDates[Number(index)])
+    .filter(Boolean)
   const selectedPressDate = pressDates[Number(form.pressDateIndex)]
 
   const ok = await onSubmit({
@@ -47,7 +49,8 @@ async function submit() {
     concertId: concert.id,
     venue: concert.venue,
     ticketUrl: concert.ticketUrl,
-    showDate: selectedShowDate ? formatDate(selectedShowDate) : "",
+    showDate: selectedShowDates.map(formatDate).join(" / "),
+    showDatesSelected: selectedShowDates,
     pressDate: selectedPressDate ? formatDate(selectedPressDate) : "",
     zoneCode: zone.code,
     zonePrice: Number(zone.price),
@@ -68,7 +71,7 @@ async function submit() {
     contact: "",
     qty: 1,
     zoneIndex: "",
-    showDateIndex: "",
+    showDateIndexes: [],
     pressDateIndex: "",
     queueNumber: "",
     assignee: "",
@@ -101,17 +104,21 @@ async function submit() {
           />
 
           <select
-            className="input"
-            value={form.showDateIndex}
-            onChange={e => setForm({ ...form, showDateIndex: e.target.value })}
+            className="input multi-select"
+            multiple
+            value={form.showDateIndexes}
+            onChange={e => {
+              const values = Array.from(e.target.selectedOptions, option => option.value)
+              setForm({ ...form, showDateIndexes: values })
+            }}
           >
-            <option value="">เลือกวันแสดง</option>
             {showDates.map((d, i) => (
               <option key={i} value={i}>
                 {formatDate(d)}
               </option>
             ))}
           </select>
+          <div className="field-hint">เลือกวันแสดงได้มากกว่าหนึ่งวัน กด Ctrl ค้างไว้แล้วเลือกหลายวัน</div>
 
           <select
             className="input"

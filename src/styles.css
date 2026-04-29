@@ -253,6 +253,16 @@ button, input, select {
   color: #111;
 }
 
+.multi-select {
+  min-height: 96px;
+}
+
+.field-hint {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .textarea {
   min-height: 82px;
   resize: vertical;
@@ -325,6 +335,8 @@ button, input, select {
 
 .modal {
   width: min(520px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
   background: rgba(17,19,26,.98);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -339,6 +351,14 @@ button, input, select {
 .form {
   display: grid;
   gap: 10px;
+}
+
+.two-col-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.span-2 {
+  grid-column: 1 / -1;
 }
 
 .total-box {
@@ -366,6 +386,8 @@ button, input, select {
 
 @media (max-width: 600px) {
   .grid { grid-template-columns: 1fr; }
+  .two-col-form { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
 }
 .authScreen {
   min-height: 100vh;
